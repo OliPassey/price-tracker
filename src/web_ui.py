@@ -268,4 +268,70 @@ def create_app():
         fig = go.Figure(data=traces, layout=layout)
         return json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
     
+    @app.route('/edit_product/<int:product_id>', methods=['GET', 'POST'])
+    def edit_product(product_id):
+        """Edit an existing product."""
+        product = db_manager.get_product(product_id)
+        if not product:
+            flash('Product not found.', 'error')
+            return redirect(url_for('index'))
+        
+        form = ProductForm()
+        
+        if form.validate_on_submit():
+            urls = {}
+            if form.jjfoodservice_url.data:
+                urls['jjfoodservice'] = form.jjfoodservice_url.data
+            if form.atoz_catering_url.data:
+                urls['atoz_catering'] = form.atoz_catering_url.data
+            if form.amazon_uk_url.data:
+                urls['amazon_uk'] = form.amazon_uk_url.data
+            
+            if not urls:
+                flash('Please provide at least one URL to track.', 'error')
+                return render_template('edit_product.html', form=form, product=product)
+            
+            try:
+                db_manager.update_product(
+                    product_id=product_id,
+                    name=form.name.data,
+                    description=form.description.data,
+                    target_price=form.target_price.data,
+                    urls=urls
+                )
+                flash(f'Product "{form.name.data}" updated successfully!', 'success')
+                return redirect(url_for('product_detail', product_id=product_id))
+            except Exception as e:
+                flash(f'Error updating product: {str(e)}', 'error')
+        
+        # Pre-populate form with existing data
+        if request.method == 'GET':
+            form.name.data = product['name']
+            form.description.data = product['description']
+            form.target_price.data = product['target_price']
+            
+            # URLs are already parsed as a dictionary by the database method
+            urls = product['urls'] if product['urls'] else {}
+            form.jjfoodservice_url.data = urls.get('jjfoodservice', '')
+            form.atoz_catering_url.data = urls.get('atoz_catering', '')
+            form.amazon_uk_url.data = urls.get('amazon_uk', '')
+        
+        return render_template('edit_product.html', form=form, product=product)
+    
+    @app.route('/delete_product/<int:product_id>', methods=['POST'])
+    def delete_product(product_id):
+        """Delete a product."""
+        product = db_manager.get_product(product_id)
+        if not product:
+            flash('Product not found.', 'error')
+            return redirect(url_for('index'))
+        
+        try:
+            db_manager.delete_product(product_id)
+            flash(f'Product "{product["name"]}" deleted successfully!', 'success')
+        except Exception as e:
+            flash(f'Error deleting product: {str(e)}', 'error')
+        
+        return redirect(url_for('index'))
+
     return app

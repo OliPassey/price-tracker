@@ -169,13 +169,21 @@ class PriceScraper:
         """Detect which site this URL belongs to."""
         domain = urlparse(url).netloc.lower()
         
-        if 'amazon' in domain:
+        # UK Catering sites (handled by UKCateringScraper)
+        if 'jjfoodservice.com' in domain:
+            return 'jjfoodservice'
+        elif 'atoz-catering.co.uk' in domain:
+            return 'atoz_catering'
+        elif 'amazon.co.uk' in domain:
+            return 'amazon_uk'
+        
+        # International sites (handled by base PriceScraper)
+        elif 'amazon.com' in domain or 'amazon.' in domain:
             return 'amazon'
         elif 'ebay' in domain:
             return 'ebay'
         elif 'walmart' in domain:
             return 'walmart'
-        # Add more site detection logic here
         
         return None
     
@@ -267,6 +275,17 @@ class PriceScraper:
                 return False
         
         return True
+    
+    def should_use_uk_scraper(self, url: str) -> bool:
+        """Determine if this URL should use the UK catering scraper."""
+        site_name = self._detect_site(url)
+        uk_sites = {'jjfoodservice', 'atoz_catering', 'amazon_uk'}
+        return site_name in uk_sites
+    
+    @classmethod
+    def get_uk_catering_sites(cls) -> set:
+        """Get the list of UK catering sites."""
+        return {'jjfoodservice', 'atoz_catering', 'amazon_uk'}
 
 
 class ScraperManager:

@@ -4,13 +4,14 @@ A comprehensive web scraper for tracking product prices across multiple e-commer
 
 ## Features ✨
 
-- **Multi-site Price Tracking**: Monitor prices across Amazon, eBay, Walmart, and more
+- **Multi-site Price Tracking**: Monitor prices across JJ Food Service, A to Z Catering, and Amazon UK
 - **Beautiful Web UI**: Clean, responsive interface for managing products and viewing price history
 - **Price Alerts**: Get notified when products reach your target price
 - **Historical Data**: View price trends with interactive charts
 - **Automated Scraping**: Schedule regular price checks
 - **Multiple Notifications**: Email and webhook notifications
 - **Robust Scraping**: Built-in retry logic, rotating user agents, and rate limiting
+- **Special Pricing Detection**: Automatically detects and prioritizes delivery prices and special offers
 
 ## Quick Start 🚀
 
@@ -106,13 +107,20 @@ Add new e-commerce sites by extending the sites configuration:
 ```json
 {
   "sites": {
-    "your_site": {
+    "atoz_catering": {
       "enabled": true,
-      "base_url": "https://www.yoursite.com",
+      "base_url": "https://www.atoz-catering.co.uk",
       "selectors": {
-        "price": [".price", ".cost"],
-        "title": [".product-title"],
-        "availability": [".stock-status"]
+        "price": [
+          ".my-price.price-offer",
+          ".delivery-price",
+          ".price"
+        ],
+        "special_offer": [
+          ".my-price.price-offer",
+          ".special-offer",
+          "del:contains('£')"
+        ]
       }
     }
   }

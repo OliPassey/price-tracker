@@ -17,6 +17,7 @@ class ScraperManager(BaseScraper):
     def __init__(self, config):
         super().__init__(config)
         self.active_tasks = {}
+        self.semaphore = asyncio.Semaphore(config.max_concurrent_requests)
     
     async def scrape_product_by_id(self, product_id: int, product_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
         """Scrape a specific product by ID with task tracking."""
@@ -35,6 +36,79 @@ class ScraperManager(BaseScraper):
             # Clean up completed task
             if product_id in self.active_tasks:
                 del self.active_tasks[product_id]
+    
+    async def scrape_product(self, product: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        """Scrape prices for a single product across all configured sites."""
+        product_id = product['id']
+        urls = product['urls']
+        
+        results = {}
+        
+        # Check if this product has UK catering sites
+        uk_catering_sites = {'jjfoodservice', 'atoz_catering', 'amazon_uk'}
+        has_uk_sites = any(site in uk_catering_sites for site in urls.keys())
+        
+        if has_uk_sites:
+            # Use UK-specific scraper
+            async with UKCateringScraper(self.config) as scraper:
+                tasks = []
+                
+                for site_name, url in urls.items():
+                    if self.config.is_site_enabled(site_name):
+                        task = self._scrape_with_semaphore_uk(scraper, url, site_name)
+                        tasks.append((site_name, task))
+                        
+                        # Add delay between requests
+                        await asyncio.sleep(self.config.delay_between_requests)
+                
+                # Wait for all tasks to complete
+                for site_name, task in tasks:
+                    try:
+                        result = await task
+                        results[site_name] = result
+                    except Exception as e:
+                        logger.error(f"Error scraping {site_name} for product {product_id}: {e}")
+                        results[site_name] = {
+                            'success': False,
+                            'error': str(e)
+                        }
+        else:
+            # Use generic scraper for non-UK sites
+            from .scraper import PriceScraper
+            async with PriceScraper(self.config) as scraper:
+                tasks = []
+                
+                for site_name, url in urls.items():
+                    if self.config.is_site_enabled(site_name):
+                        task = self._scrape_with_semaphore(scraper, url, site_name)
+                        tasks.append((site_name, task))
+                        
+                        # Add delay between requests
+                        await asyncio.sleep(self.config.delay_between_requests)
+                
+                # Wait for all tasks to complete
+                for site_name, task in tasks:
+                    try:
+                        result = await task
+                        results[site_name] = result
+                    except Exception as e:
+                        logger.error(f"Error scraping {site_name} for product {product_id}: {e}")
+                        results[site_name] = {
+                            'success': False,
+                            'error': str(e)
+                        }
+        
+        return results
+    
+    async def _scrape_with_semaphore_uk(self, scraper: UKCateringScraper, url: str, site_name: str):
+        """Scrape with semaphore using UK scraper."""
+        async with self.semaphore:
+            return await scraper.scrape_product_price(url, site_name)
+        
+    async def _scrape_with_semaphore(self, scraper, url: str, site_name: str):
+        """Scrape with semaphore using generic scraper."""
+        async with self.semaphore:
+            return await scraper.scrape_product_price(url, site_name)
     
     async def cancel_product_scraping(self, product_id: int) -> bool:
         """Cancel scraping for a specific product."""

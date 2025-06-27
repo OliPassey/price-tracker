@@ -1,0 +1,68 @@
+name: Advanced Mirror to Azure DevOps
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    types: [closed]
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      force_push:
+        description: 'Force push to Azure DevOps'
+        required: false
+        default: 'false'
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true) || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Setup Git
+      run: |
+        git config --global user.name "GitHub Mirror Bot"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        
+    - name: Add Azure DevOps Remote
+      env:
+        AZURE_DEVOPS_TOKEN: ${{ secrets.AZURE_DEVOPS_PAT }}
+      run: |
+        # URL encode the repository name for spaces
+        ENCODED_URL="https://oauth2:${AZURE_DEVOPS_TOKEN}@dev.azure.com/ptslondon/_git/Price%20Tracker"
+        git remote add azure "$ENCODED_URL"
+        
+    - name: Mirror Repository
+      env:
+        FORCE_PUSH: ${{ github.event.inputs.force_push }}
+      run: |
+        # Set force flag
+        FORCE_FLAG=""
+        if [ "$FORCE_PUSH" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          FORCE_FLAG="--force"
+        fi
+        
+        # Push current branch
+        CURRENT_BRANCH=${GITHUB_REF#refs/heads/}
+        echo "Mirroring branch: $CURRENT_BRANCH"
+        
+        git push azure "$CURRENT_BRANCH" $FORCE_FLAG
+        
+        # Push tags
+        git push azure --tags $FORCE_FLAG
+        
+        echo "✅ Successfully mirrored to Azure DevOps"
+        
+    - name: Verify Mirror
+      run: |
+        echo "Mirror completed for:"
+        echo "- Repository: Price Tracker"
+        echo "- Branch: ${GITHUB_REF#refs/heads/}"
+        echo "- Commit: ${{ github.sha }}"
+        echo "- Azure DevOps URL: https://dev.azure.com/ptslondon/_git/Price%20Tracker"

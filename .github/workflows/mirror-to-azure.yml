@@ -1,0 +1,34 @@
+name: Mirror to Azure DevOps
+
+on:
+  push:
+    branches: [ main, master, develop ]  # Add branches you want to mirror
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch full history for complete mirror
+        
+    - name: Mirror to Azure DevOps
+      env:
+        AZURE_DEVOPS_URL: https://dev.azure.com/ptslondon/_git/Price%20Tracker
+        AZURE_DEVOPS_TOKEN: ${{ secrets.AZURE_DEVOPS_PAT }}
+      run: |
+        # Configure git
+        git config --global user.name "GitHub Mirror Bot"
+        git config --global user.email "noreply@github.com"
+        
+        # Add Azure DevOps as remote
+        git remote add azure https://oauth2:${AZURE_DEVOPS_TOKEN}@dev.azure.com/ptslondon/_git/Price%20Tracker
+        
+        # Push all branches and tags
+        git push azure --all --force
+        git push azure --tags --force
+        
+        echo "Successfully mirrored to Azure DevOps"

@@ -147,6 +147,15 @@ class DatabaseManager:
                 UPDATE products SET active = 0, updated_at = ? WHERE id = ?
             ''', (datetime.now(), product_id))
     
+    def delete_product(self, product_id: int):
+        """Delete a product and all its associated price history."""
+        with sqlite3.connect(self.db_path) as conn:
+            # Delete price history first (due to foreign key constraints)
+            conn.execute('DELETE FROM price_history WHERE product_id = ?', (product_id,))
+            
+            # Delete the product
+            conn.execute('DELETE FROM products WHERE id = ?', (product_id,))
+    
     def save_price_history(self, product_id: int, site_name: str, price: float,
                           currency: str = 'GBP', availability: bool = True,
                           timestamp: datetime = None):

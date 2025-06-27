@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Add Product - Price Tracker{% endblock %}
+{% block title %}Edit Product - Price Tracker{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -8,7 +8,7 @@
         <div class="card">
             <div class="card-header">
                 <h2 class="mb-0">
-                    <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Product
+                    <i class="fas fa-edit me-2 text-primary"></i>Edit Product: {{ product.name }}
                 </h2>
             </div>
             <div class="card-body">
@@ -54,22 +54,20 @@
                                 {% endfor %}
                             </div>
                         {% endif %}
-                        <small class="text-muted">Optional: Brief description of the product</small>
                     </div>
                     
                     <hr class="my-4">
-                    
-                    <h4 class="mb-3">
-                        <i class="fas fa-link me-2 text-info"></i>Product URLs
-                    </h4>
-                    <p class="text-muted mb-4">Add URLs from the sites you want to track. At least one URL is required.</p>
+                    <h5 class="mb-3">
+                        <i class="fas fa-link me-2 text-secondary"></i>Store URLs
+                    </h5>
+                    <p class="text-muted small mb-3">Add URLs from the stores you want to track. At least one URL is required.</p>
                     
                     <div class="row">
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
                             {{ form.jjfoodservice_url.label(class="form-label fw-bold") }}
                             <div class="input-group">
-                                <span class="input-group-text jjfoodservice">
-                                    <i class="fas fa-utensils"></i> JJ Food Service
+                                <span class="input-group-text">
+                                    <i class="fas fa-store text-primary"></i>
                                 </span>
                                 {{ form.jjfoodservice_url(class="form-control", placeholder="https://www.jjfoodservice.com/...") }}
                             </div>
@@ -82,11 +80,11 @@
                             {% endif %}
                         </div>
                         
-                        <div class="col-md-12 mb-3">
+                        <div class="col-md-6 mb-3">
                             {{ form.atoz_catering_url.label(class="form-label fw-bold") }}
                             <div class="input-group">
-                                <span class="input-group-text atoz_catering">
-                                    <i class="fas fa-store"></i> A to Z Catering
+                                <span class="input-group-text">
+                                    <i class="fas fa-store text-success"></i>
                                 </span>
                                 {{ form.atoz_catering_url(class="form-control", placeholder="https://www.atoz-catering.co.uk/...") }}
                             </div>
@@ -98,12 +96,14 @@
                                 </div>
                             {% endif %}
                         </div>
-                        
-                        <div class="col-md-12 mb-3">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
                             {{ form.amazon_uk_url.label(class="form-label fw-bold") }}
                             <div class="input-group">
-                                <span class="input-group-text amazon_uk">
-                                    <i class="fab fa-amazon"></i> Amazon UK
+                                <span class="input-group-text">
+                                    <i class="fab fa-amazon text-warning"></i>
                                 </span>
                                 {{ form.amazon_uk_url(class="form-control", placeholder="https://www.amazon.co.uk/...") }}
                             </div>
@@ -117,72 +117,74 @@
                         </div>
                     </div>
                     
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Tips:</strong>
-                        <ul class="mb-0 mt-2">
-                            <li>Make sure URLs point to the specific product page</li>
-                            <li>Test URLs in your browser first to ensure they work</li>
-                            <li>The system will automatically prioritize <strong>delivery prices</strong> over collection prices</li>
-                            <li>For JJ Food Service and A to Z Catering, ensure you can see delivery pricing on the page</li>
-                            <li>For best results, use direct product page URLs</li>
-                        </ul>
-                    </div>
+                    <hr class="my-4">
                     
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-md-2">
-                            <i class="fas fa-arrow-left me-1"></i>Cancel
-                        </a>
-                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="submit" class="btn btn-primary btn-lg me-3">
+                                <i class="fas fa-save me-2"></i>Update Product
+                            </button>
+                            <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                        </div>
+                        
+                        <!-- Delete button -->
+                        <div>
+                            <button type="button" class="btn btn-outline-danger btn-lg" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                                <i class="fas fa-trash me-2"></i>Delete Product
+                            </button>
+                        </div>
                     </div>
                 </form>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row mt-4">
-    <div class="col-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-question-circle me-2"></i>How to Find Product URLs
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6 class="fw-bold">JJ Food Service</h6>
-                        <p class="small text-muted">
-                            Navigate to the specific product page on JJ Food Service and copy the URL. 
-                            Make sure you're logged in for accurate pricing. The system will automatically 
-                            prioritize <strong>delivery prices</strong> over collection prices.
-                        </p>
-                        
-                        <h6 class="fw-bold">A to Z Catering</h6>
-                        <p class="small text-muted">
-                            Go to the product page on A to Z Catering and copy the URL. 
-                            URLs typically contain "/products/product/" followed by the product name.
-                            The system will automatically capture <strong>delivery pricing</strong> when available.
-                        </p>
-                    </div>
-                    <div class="col-md-6">
-                        <h6 class="fw-bold">Amazon UK</h6>
-                        <p class="small text-muted">
-                            Navigate to the product page on Amazon.co.uk and copy the URL. 
-                            The URL should contain "/dp/" followed by the product identifier.
-                        </p>
-                        
-                        <h6 class="fw-bold text-success">Delivery Pricing Priority</h6>
-                        <p class="small text-muted">
-                            For JJ Food Service and A to Z Catering, the system automatically prioritizes 
-                            delivery prices over collection prices. This ensures you're tracking the 
-                            most relevant pricing for delivered goods to your business.
-                        </p>
+                
+                <!-- Help section -->
+                <div class="mt-5">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-info-circle me-2 text-info"></i>How to find product URLs
+                            </h6>
+                            <ul class="card-text small mb-0">
+                                <li><strong>JJ Food Service:</strong> Search for your product and copy the URL from the product page</li>
+                                <li><strong>A to Z Catering:</strong> Navigate to the specific product and copy the URL</li>
+                                <li><strong>Amazon UK:</strong> Find the product and copy the URL (we'll extract the essential part)</li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2 text-warning"></i>Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>"{{ product.name }}"</strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="fas fa-warning me-2"></i>
+                    <strong>Warning:</strong> This action cannot be undone. All price history for this product will be permanently deleted.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_product', product_id=product.id) }}" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete Product
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
