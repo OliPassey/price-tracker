@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="display-5">{{ product.name }}</h1>
+        {% if product.description %}
+        <p class="text-muted">{{ product.description }}</p>
+        {% endif %}
+    </div>
+    <div>
+        <button class="btn btn-success me-2" onclick="scrapeProduct({{ product.id }})">
+            <i class="fas fa-sync-alt me-1"></i>Scrape Now
+        </button>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Price Overview -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tags me-2"></i>Current Prices
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if latest_prices %}
+                    {% set price_list = latest_prices.values() | list %}
+                    {% set min_price = price_list | min(attribute='price') %}
+                    {% set max_price = price_list | max(attribute='price') %}
+                    
+                    {% for site_name, price_data in latest_prices.items() %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-3 rounded 
+                         {% if price_data.price == min_price.price %}bg-success bg-opacity-10{% endif %}">
+                        <div>
+                            <span class="site-badge {{ site_name }}">{{ site_name.title() }}</span>
+                            {% if not price_data.availability %}
+                            <span class="badge bg-warning ms-2">Out of Stock</span>
+                            {% endif %}
+                            {% if price_data.price == min_price.price %}
+                            <span class="badge bg-success ms-2">
+                                <i class="fas fa-trophy"></i> Best Price
+                            </span>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <div class="h5 mb-0">£{{ "%.2f"|format(price_data.price) }}</div>
+                            <small class="text-muted">{{ price_data.timestamp[:10] }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if product.target_price %}
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-bold">Target Price:</span>
+                        <span class="h5 mb-0 text-info">£{{ "%.2f"|format(product.target_price) }}</span>
+                    </div>
+                    
+                    {% if min_price.price <= product.target_price %}
+                    <div class="alert alert-success mt-3 py-2">
+                        <i class="fas fa-bell me-2"></i>
+                        <strong>Target Reached!</strong> Best price is at or below your target.
+                    </div>
+                    {% else %}
+                    <div class="alert alert-info mt-3 py-2">
+                        <i class="fas fa-info-circle me-2"></i>
+                        You could save <strong>£{{ "%.2f"|format(min_price.price - product.target_price) }}</strong> 
+                        when price drops to target.
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                    
+                {% else %}
+                <p class="text-muted text-center py-4">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-3"></i><br>
+                    No price data available yet.<br>
+                    <button class="btn btn-primary mt-2" onclick="scrapeProduct({{ product.id }})">
+                        Get Prices Now
+                    </button>
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Product URLs -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-link me-2"></i>Tracked URLs
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for site_name, url in product.urls.items() %}
+                <div class="mb-2">
+                    <span class="site-badge {{ site_name }}">{{ site_name.title() }}</span>
+                    <a href="{{ url }}" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                        <i class="fas fa-external-link-alt"></i> View
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Price Chart -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>Price History (Last 30 Days)
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if price_history %}
+                <div id="priceChart" style="height: 400px;"></div>
+                {% else %}
+                <p class="text-muted text-center py-5">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i><br>
+                    No price history available yet. Price data will appear here after scraping.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Price Statistics -->
+        {% if price_stats %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>Price Statistics (Last 30 Days)
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for site_name, stats in price_stats.items() %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <span class="site-badge {{ site_name }}">{{ site_name.title() }}</span>
+                                </h6>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <small class="text-muted">Min Price</small>
+                                        <div class="fw-bold text-success">£{{ "%.2f"|format(stats.min_price) }}</div>
+                                    </div>
+                                    <div class="col-6">
+                                        <small class="text-muted">Max Price</small>
+                                        <div class="fw-bold text-danger">£{{ "%.2f"|format(stats.max_price) }}</div>
+                                    </div>
+                                    <div class="col-6 mt-2">
+                                        <small class="text-muted">Avg Price</small>
+                                        <div class="fw-bold">£{{ "%.2f"|format(stats.avg_price) }}</div>
+                                    </div>
+                                    <div class="col-6 mt-2">
+                                        <small class="text-muted">Data Points</small>
+                                        <div class="fw-bold">{{ stats.data_points }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Recent Price History -->
+        {% if price_history %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Price Updates
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Site</th>
+                                <th>Price</th>
+                                <th>Available</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in price_history[:20] %}
+                            <tr>
+                                <td>
+                                    <span class="site-badge {{ entry.site_name }}">{{ entry.site_name.title() }}</span>
+                                </td>
+                                <td class="fw-bold">£{{ "%.2f"|format(entry.price) }}</td>
+                                <td>
+                                    {% if entry.availability %}
+                                    <span class="badge bg-success">Available</span>
+                                    {% else %}
+                                    <span class="badge bg-warning">Out of Stock</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted">{{ entry.timestamp[:16] }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if price_history|length > 20 %}
+                <p class="text-muted text-center mt-3">
+                    Showing 20 most recent entries of {{ price_history|length }} total.
+                </p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if chart_json %}
+<script>
+    var chartData = {{ chart_json|safe }};
+    Plotly.newPlot('priceChart', chartData.data, chartData.layout, {responsive: true});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Add Product - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="mb-0">
+                    <i class="fas fa-plus-circle me-2 text-primary"></i>Add New Product
+                </h2>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            {{ form.name.label(class="form-label fw-bold") }}
+                            {{ form.name(class="form-control form-control-lg") }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.name.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            {{ form.target_price.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">£</span>
+                                {{ form.target_price(class="form-control form-control-lg") }}
+                            </div>
+                            {% if form.target_price.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.target_price.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Optional: Alert when price drops below this</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label fw-bold") }}
+                        {{ form.description(class="form-control", rows="3") }}
+                        {% if form.description.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.description.errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <small class="text-muted">Optional: Brief description of the product</small>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h4 class="mb-3">
+                        <i class="fas fa-link me-2 text-info"></i>Product URLs
+                    </h4>
+                    <p class="text-muted mb-4">Add URLs from the sites you want to track. At least one URL is required.</p>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            {{ form.jjfoodservice_url.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text jjfoodservice">
+                                    <i class="fas fa-utensils"></i> JJ Food Service
+                                </span>
+                                {{ form.jjfoodservice_url(class="form-control", placeholder="https://www.jjfoodservice.com/...") }}
+                            </div>
+                            {% if form.jjfoodservice_url.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.jjfoodservice_url.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.atoz_catering_url.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text atoz_catering">
+                                    <i class="fas fa-store"></i> A to Z Catering
+                                </span>
+                                {{ form.atoz_catering_url(class="form-control", placeholder="https://www.atoz-catering.co.uk/...") }}
+                            </div>
+                            {% if form.atoz_catering_url.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.atoz_catering_url.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            {{ form.amazon_uk_url.label(class="form-label fw-bold") }}
+                            <div class="input-group">
+                                <span class="input-group-text amazon_uk">
+                                    <i class="fab fa-amazon"></i> Amazon UK
+                                </span>
+                                {{ form.amazon_uk_url(class="form-control", placeholder="https://www.amazon.co.uk/...") }}
+                            </div>
+                            {% if form.amazon_uk_url.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in form.amazon_uk_url.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Tips:</strong>
+                        <ul class="mb-0 mt-2">
+                            <li>Make sure URLs point to the specific product page</li>
+                            <li>Test URLs in your browser first to ensure they work</li>
+                            <li>Some sites may block automated requests - we'll handle this gracefully</li>
+                            <li>For best results, use direct product page URLs</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary me-md-2">
+                            <i class="fas fa-arrow-left me-1"></i>Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary btn-lg") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>How to Find Product URLs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">JJ Food Service</h6>
+                        <p class="small text-muted">
+                            Navigate to the specific product page on JJ Food Service and copy the URL. 
+                            Make sure you're logged in for accurate pricing.
+                        </p>
+                        
+                        <h6 class="fw-bold">A to Z Catering</h6>
+                        <p class="small text-muted">
+                            Go to the product page on A to Z Catering and copy the URL. 
+                            URLs typically contain "/products/product/" followed by the product name.
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-bold">Amazon UK</h6>
+                        <p class="small text-muted">
+                            Navigate to the product page on Amazon.co.uk and copy the URL. 
+                            The URL should contain "/dp/" followed by the product identifier.
+                        </p>
+                        
+                        <h6 class="fw-bold text-muted">Note</h6>
+                        <p class="small text-muted">
+                            We focus on UK catering supply websites that work well with automated price tracking. 
+                            This provides reliable price monitoring for your business needs.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

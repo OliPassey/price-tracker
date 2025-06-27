@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  price-tracker:
+    build: .
+    container_name: price-tracker
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount database and logs for persistence
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Mount config for easy updates
+      - ./config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - price-tracker-network
+
+networks:
+  price-tracker-network:
+    driver: bridge
+
+volumes:
+  price-tracker-data:
+  price-tracker-logs:

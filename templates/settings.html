@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <h1 class="display-5 mb-4">
+            <i class="fas fa-cog me-3 text-primary"></i>Settings
+        </h1>
+        
+        <!-- Scraping Settings -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-spider me-2"></i>Scraping Configuration
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Request Settings</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Delay between requests:</strong> {{ config.delay_between_requests }}s</li>
+                            <li><strong>Max concurrent requests:</strong> {{ config.max_concurrent_requests }}</li>
+                            <li><strong>Request timeout:</strong> {{ config.timeout }}s</li>
+                            <li><strong>Retry attempts:</strong> {{ config.retry_attempts }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>User Agents</h6>
+                        <p class="text-muted small">{{ config.user_agents|length }} user agents configured</p>
+                        <details>
+                            <summary class="text-primary" style="cursor: pointer;">View user agents</summary>
+                            <div class="mt-2">
+                                {% for ua in config.user_agents %}
+                                <div class="small text-muted mb-1">{{ ua[:80] }}...</div>
+                                {% endfor %}
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Site Configuration -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-store me-2"></i>Supported Sites
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for site_name, site_config in config.sites_config.items() %}
+                    <div class="col-md-4 mb-3">
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <span class="site-badge {{ site_name }}">{{ site_name.title() }}</span>
+                                    {% if site_config.enabled %}
+                                    <span class="badge bg-success ms-2">Enabled</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-2">Disabled</span>
+                                    {% endif %}
+                                </h6>
+                                <p class="card-text small text-muted">
+                                    <strong>Base URL:</strong> {{ site_config.base_url }}<br>
+                                    <strong>Price selectors:</strong> {{ site_config.selectors.price|length }}<br>
+                                    <strong>Title selectors:</strong> {{ site_config.selectors.title|length }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Notification Settings -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-bell me-2"></i>Notification Settings
+                </h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="testNotifications()">
+                    <i class="fas fa-test-tube me-1"></i>Test Notifications
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>
+                            <i class="fas fa-envelope me-2"></i>Email Notifications
+                            {% if config.notification_config.email.enabled %}
+                            <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </h6>
+                        {% if config.notification_config.email.enabled %}
+                        <ul class="list-unstyled small">
+                            <li><strong>SMTP Server:</strong> {{ config.notification_config.email.smtp_server }}</li>
+                            <li><strong>Port:</strong> {{ config.notification_config.email.smtp_port }}</li>
+                            <li><strong>Sender:</strong> {{ config.notification_config.email.sender_email }}</li>
+                            <li><strong>Recipient:</strong> {{ config.notification_config.email.recipient_email }}</li>
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small">Email notifications are disabled. Configure in config.json to enable.</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6>
+                            <i class="fas fa-webhook me-2"></i>Webhook Notifications
+                            {% if config.notification_config.webhook.enabled %}
+                            <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </h6>
+                        {% if config.notification_config.webhook.enabled %}
+                        <p class="small">
+                            <strong>Webhook URL:</strong><br>
+                            <code>{{ config.notification_config.webhook.url }}</code>
+                        </p>
+                        {% else %}
+                        <p class="text-muted small">Webhook notifications are disabled. Configure in config.json to enable.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Database Information -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-database me-2"></i>Database Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Database Path:</strong> <code>{{ config.database_path }}</code></p>
+                <p class="text-muted small">
+                    The SQLite database stores all product information and price history.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Quick Actions -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" onclick="scrapeAll()">
+                        <i class="fas fa-sync-alt me-2"></i>Scrape All Products
+                    </button>
+                    <button class="btn btn-info" onclick="testNotifications()">
+                        <i class="fas fa-bell me-2"></i>Test Notifications
+                    </button>
+                    <button class="btn btn-secondary" onclick="checkSystemHealth()">
+                        <i class="fas fa-heartbeat me-2"></i>System Health Check
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Configuration Help -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>Configuration Help
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Configuration File</h6>
+                <p class="small text-muted">
+                    Settings are stored in <code>config.json</code>. 
+                    Edit this file to customize scraping behavior, add new sites, or configure notifications.
+                </p>
+                
+                <h6>Adding New Sites</h6>
+                <p class="small text-muted">
+                    To add support for new e-commerce sites, add a new section to the "sites" 
+                    configuration with CSS selectors for price, title, and availability.
+                </p>
+                
+                <h6>Email Setup</h6>
+                <p class="small text-muted">
+                    For Gmail, use <code>smtp.gmail.com:587</code> and an app-specific password. 
+                    Enable "Less secure app access" or use OAuth2.
+                </p>
+                
+                <h6>Webhooks</h6>
+                <p class="small text-muted">
+                    Webhook notifications send JSON payloads to your specified URL. 
+                    Useful for integrating with Slack, Discord, or custom applications.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function checkSystemHealth() {
+    alert('System health check functionality would be implemented here.');
+    // This would make an API call to check system health
+}
+</script>
+{% endblock %}

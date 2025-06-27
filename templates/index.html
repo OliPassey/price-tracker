@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Price Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="display-4">
+        <i class="fas fa-tachometer-alt me-3 text-primary"></i>Dashboard
+    </h1>
+    <a href="{{ url_for('add_product') }}" class="btn btn-primary btn-lg">
+        <i class="fas fa-plus me-2"></i>Add Product
+    </a>
+</div>
+
+{% if not products %}
+<div class="text-center py-5">
+    <div class="card mx-auto" style="max-width: 500px;">
+        <div class="card-body">
+            <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <h3 class="text-muted">No Products Yet</h3>
+            <p class="text-muted">Start tracking prices by adding your first product!</p>
+            <a href="{{ url_for('add_product') }}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Add Your First Product
+            </a>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="row">
+    {% for product in products %}
+    <div class="col-lg-6 col-xl-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title fw-bold">{{ product.name }}</h5>
+                    {% if product.target_price %}
+                    <span class="badge bg-info">
+                        Target: £{{ "%.2f"|format(product.target_price) }}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                {% if product.description %}
+                <p class="card-text text-muted small">{{ product.description[:100] }}{% if product.description|length > 100 %}...{% endif %}</p>
+                {% endif %}
+                
+                <!-- Sites being tracked -->
+                <div class="mb-3">
+                    <small class="text-muted">Tracking on:</small><br>
+                    {% for site_name in product.urls.keys() %}
+                    <span class="site-badge {{ site_name }}">{{ site_name.title() }}</span>
+                    {% endfor %}
+                </div>
+                
+                <!-- Current Prices -->
+                {% if product.latest_prices %}
+                <div class="row g-2 mb-3">
+                    {% for site_name, price_data in product.latest_prices.items() %}
+                    <div class="col-12">
+                        <div class="d-flex justify-content-between align-items-center p-2 bg-light rounded">
+                            <span class="site-badge {{ site_name }} small">{{ site_name.title() }}</span>
+                            <div class="text-end">
+                                <span class="fw-bold">£{{ "%.2f"|format(price_data.price) }}</span>
+                                <br><small class="text-muted">{{ price_data.timestamp[:10] }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Best Price Highlight -->
+                {% if product.best_price %}
+                <div class="alert alert-success py-2 mb-3">
+                    <i class="fas fa-trophy me-2"></i>
+                    <strong>Best Price: £{{ "%.2f"|format(product.best_price.price) }}</strong>
+                    {% if product.target_price and product.best_price.price <= product.target_price %}
+                    <span class="badge bg-danger ms-2">
+                        <i class="fas fa-bell me-1"></i>Target Reached!
+                    </span>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% else %}
+                <div class="alert alert-warning py-2 mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    No price data yet. Click "Scrape Now" to get prices.
+                </div>
+                {% endif %}
+                
+                <!-- Action Buttons -->
+                <div class="d-grid gap-2">
+                    <div class="btn-group" role="group">
+                        <a href="{{ url_for('product_detail', product_id=product.id) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-chart-line me-1"></i>Details
+                        </a>
+                        <button class="btn btn-success" onclick="scrapeProduct({{ product.id }})">
+                            <i class="fas fa-sync-alt me-1"></i>Scrape Now
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Card Footer with last update -->
+            <div class="card-footer bg-transparent">
+                <small class="text-muted">
+                    <i class="fas fa-clock me-1"></i>
+                    Added: {{ product.created_at[:10] }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Summary Stats -->
+<div class="row mt-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-shopping-bag fa-2x text-primary mb-2"></i>
+                <h4 class="fw-bold">{{ products|length }}</h4>
+                <p class="text-muted mb-0">Products Tracked</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-store fa-2x text-success mb-2"></i>
+                <h4 class="fw-bold">
+                    {% if products %}
+                        {% set total_urls = 0 %}
+                        {% for product in products %}
+                            {% set total_urls = total_urls + product.urls|length %}
+                        {% endfor %}
+                        {{ total_urls }}
+                    {% else %}
+                        0
+                    {% endif %}
+                </h4>
+                <p class="text-muted mb-0">Total URLs</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-bell fa-2x text-warning mb-2"></i>
+                <h4 class="fw-bold">
+                    {% set alerts = [] %}
+                    {% for product in products %}
+                        {% if product.target_price and product.best_price and product.best_price.price <= product.target_price %}
+                            {% set _ = alerts.append(1) %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ alerts|length }}
+                </h4>
+                <p class="text-muted mb-0">Price Alerts</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-chart-bar fa-2x text-info mb-2"></i>
+                <h4 class="fw-bold">
+                    {% set total_savings = 0 %}
+                    {% for product in products %}
+                        {% if product.target_price and product.best_price %}
+                            {% set savings = product.target_price - product.best_price.price %}
+                            {% if savings > 0 %}
+                                {% set total_savings = total_savings + savings %}
+                            {% endif %}
+                        {% endif %}
+                    {% endfor %}
+                    £{{ "%.0f"|format(total_savings) }}
+                </h4>
+                <p class="text-muted mb-0">Potential Savings</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

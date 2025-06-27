@@ -1,0 +1,113 @@
+{
+    "database": {
+        "path": "price_tracker.db"
+    },
+    "scraping": {
+        "delay_between_requests": 2,
+        "max_concurrent_requests": 1,
+        "timeout": 30,
+        "retry_attempts": 3,
+        "user_agents": [
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        ]
+    },
+    "notifications": {
+        "email": {
+            "enabled": false,
+            "smtp_server": "smtp.gmail.com",
+            "smtp_port": 587,
+            "sender_email": "",
+            "sender_password": "",
+            "recipient_email": ""
+        },
+        "webhook": {
+            "enabled": false,
+            "url": ""
+        }
+    },
+    "sites": {
+        "jjfoodservice": {
+            "enabled": true,
+            "base_url": "https://www.jjfoodservice.com",
+            "selectors": {
+                "price": [
+                    ".price",
+                    ".product-price",
+                    "[data-testid='price']",
+                    ".price-value",
+                    ".current-price",
+                    ".product-card-price"
+                ],
+                "title": [
+                    "h1",
+                    ".product-title",
+                    ".product-name",
+                    "[data-testid='product-title']",
+                    ".product-card-title"
+                ],
+                "availability": [
+                    ".stock-status",
+                    ".availability",
+                    "[data-testid='availability']",
+                    ".product-availability"
+                ]
+            }
+        },
+        "atoz_catering": {
+            "enabled": true,
+            "base_url": "https://www.atoz-catering.co.uk",
+            "selectors": {
+                "price": [
+                    ".price",
+                    ".product-price",
+                    ".delivery-price",
+                    ".collection-price",
+                    "span:contains('£')",
+                    ".price-value"
+                ],
+                "title": [
+                    "h1",
+                    ".product-title",
+                    ".product-name",
+                    "a[href*='/products/product/']",
+                    ".product-link"
+                ],
+                "availability": [
+                    ".stock-status",
+                    ".availability",
+                    ".add-to-basket",
+                    "button:contains('Add To Basket')",
+                    ".out-of-stock"
+                ]
+            }
+        },
+        "amazon_uk": {
+            "enabled": true,
+            "base_url": "https://www.amazon.co.uk",
+            "selectors": {
+                "price": [
+                    ".a-price-whole",
+                    ".a-price .a-offscreen",
+                    "#priceblock_dealprice",
+                    "#priceblock_ourprice",
+                    ".a-price-range",
+                    ".a-price.a-text-price.a-size-medium.apexPriceToPay",
+                    ".a-price-current"
+                ],
+                "title": [
+                    "#productTitle",
+                    ".product-title",
+                    "h1.a-size-large"
+                ],
+                "availability": [
+                    "#availability span",
+                    ".a-size-medium.a-color-success",
+                    ".a-size-medium.a-color-state",
+                    "#availability .a-declarative"
+                ]
+            }
+        }
+    }
+}
