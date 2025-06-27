@@ -171,6 +171,51 @@ Add new e-commerce sites by extending the sites configuration:
 4. **Multiple Sites**: Track the same product on multiple sites for best deals
 5. **Regular Updates**: Run scraping regularly but not too frequently (every few hours is good)
 
+## Deployment 🚀
+
+### Docker Deployment
+
+1. **Build and run with Docker**:
+   ```bash
+   # Build the container
+   docker build -t price-tracker .
+   
+   # Run with docker-compose
+   docker-compose up -d
+   ```
+
+2. **Manual Docker deployment**:
+   ```bash
+   docker run -d \
+     --name price-tracker \
+     -p 5000:5000 \
+     -v $(pwd)/data:/app/data \
+     price-tracker
+   ```
+
+### CI/CD with Azure DevOps
+
+The project includes Azure DevOps pipeline configuration for automated deployments:
+
+1. **Setup GitHub Integration**:
+   - See `AZURE-DEVOPS-SETUP.md` for detailed instructions
+   - Pipeline pulls directly from GitHub
+   - Automatic builds on push to `main` or `develop` branches
+
+2. **Pipeline Features**:
+   - Docker image build and push to registry
+   - Security scanning with Trivy
+   - Automated testing
+   - Multi-environment deployment (dev/prod)
+
+3. **Quick Setup**:
+   ```bash
+   # Update azure-pipelines.yml with your GitHub repo
+   # Create GitHub service connection in Azure DevOps
+   # Create Docker registry service connection
+   # Run the pipeline
+   ```
+
 ## Troubleshooting 🔧
 
 ### Common Issues

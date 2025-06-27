@@ -1,3 +1,11 @@
+# Template: Azure DevOps Pipeline for GitHub Integration
+# 
+# INSTRUCTIONS:
+# 1. Replace 'your-github-username/price-tracker' with your actual GitHub repository path
+# 2. Ensure your GitHub service connection is named 'github' in Azure DevOps
+# 3. Update the Docker registry variables if needed
+# 4. Copy this content to azure-pipelines.yml in your repository
+
 # Pipeline for Price Tracker application
 # This pipeline pulls from GitHub and builds/deploys the Docker container
 
@@ -7,7 +15,7 @@ resources:
   - repository: self
     type: github
     endpoint: github  # This should match your GitHub service connection name
-    name: olipassey/price-tracker  # Replace with your actual GitHub repo path
+    name: your-github-username/price-tracker  # TODO: Replace with your actual GitHub repo path
 
 trigger:
   branches:
@@ -27,7 +35,7 @@ variables:
   # Container registry service connection established during pipeline creation
   dockerRegistryServiceConnection: 'dock-ptslondon-connection'
   imageRepository: 'price-tracker'
-  containerRegistry: 'dock.ptslondon.co.uk'
+  containerRegistry: 'dock.ptslondon.co.uk'  # TODO: Update if using different registry
   dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
   tag: '$(Build.BuildId)'
   

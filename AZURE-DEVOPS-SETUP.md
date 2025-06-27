@@ -4,50 +4,71 @@ This guide will help you set up the Azure DevOps pipeline to automatically build
 
 ## Prerequisites
 
-1. Azure DevOps project with your Price Tracker repository
-2. Access to your Docker registry at `dock.ptslondon.co.uk`
-3. Admin permissions in Azure DevOps to create service connections
+1. Azure DevOps project
+2. GitHub repository with your Price Tracker code
+3. Access to your Docker registry at `dock.ptslondon.co.uk`
+4. Admin permissions in Azure DevOps to create service connections
 
-## Step 1: Create Docker Registry Service Connection
+## Step 1: Create GitHub Service Connection
 
 1. In your Azure DevOps project, go to **Project Settings** (bottom left)
 2. Under **Pipelines**, click **Service connections**
 3. Click **New service connection**
-4. Select **Docker Registry** and click **Next**
-5. Choose **Others** for registry type
-6. Fill in the details:
+4. Select **GitHub** and click **Next**
+5. Choose **Azure Pipelines** app:
+   - Click **Authorize using OAuth**
+   - Sign in to GitHub and authorize Azure Pipelines
+   - OR use **Personal Access Token** if you prefer:
+     - Create a GitHub PAT with `repo` scope
+     - Enter your GitHub username and PAT
+6. **Service connection name**: `github` (this must match the pipeline)
+7. Check **Grant access permission to all pipelines**
+8. Click **Save**
+
+## Step 2: Create Docker Registry Service Connection
+
+1. In **Service connections**, click **New service connection**
+2. Select **Docker Registry** and click **Next**
+3. Choose **Others** for registry type
+4. Fill in the details:
    - **Docker Registry**: `https://dock.ptslondon.co.uk`
    - **Docker ID**: Your registry username
    - **Docker Password**: Your registry password
    - **Service connection name**: `dock-ptslondon-connection`
-7. Check **Grant access permission to all pipelines**
-8. Click **Save**
+5. Check **Grant access permission to all pipelines**
+6. Click **Save**
 
-## Step 2: Choose Your Pipeline
+## Step 3: Update Pipeline Configuration
 
-You have two pipeline options:
+1. Open `azure-pipelines.yml` in your repository
+2. Update the GitHub repository path in the resources section:
+   ```yaml
+   resources:
+     repositories:
+     - repository: self
+       type: github
+       endpoint: github  # This matches your GitHub service connection
+       name: your-github-username/price-tracker  # Replace with your actual repo
+   ```
 
-### Basic Pipeline (`azure-pipelines.yml`)
-- Simple build and push
-- Basic testing
-- Good for getting started
-
-### Advanced Pipeline (`azure-pipelines-advanced.yml`)
-- Multi-stage deployment
-- Security scanning with Trivy
-- Separate dev/prod environments
-- More comprehensive testing
-
-## Step 3: Create the Pipeline
+## Step 4: Create the Pipeline
 
 1. In Azure DevOps, go to **Pipelines** → **Pipelines**
 2. Click **New pipeline**
-3. Select **Azure Repos Git** (or your source)
+3. Select **GitHub**
+4. Select your Price Tracker repository from GitHub
+5. Azure DevOps will detect the `azure-pipelines.yml` file
+6. Review the pipeline and click **Run**
+
+## Alternative: Manual YAML Pipeline Setup
+
+If you prefer to create the pipeline manually:
+1. Go to **Pipelines** → **Pipelines**
+2. Click **New pipeline**
+3. Select **GitHub YAML**
 4. Select your repository
 5. Choose **Existing Azure Pipelines YAML file**
-6. Select the pipeline file:
-   - `/azure-pipelines.yml` (basic)
-   - `/azure-pipelines-advanced.yml` (advanced)
+6. Select `/azure-pipelines.yml`
 7. Click **Continue**
 8. Review the pipeline and click **Run**
 
@@ -65,7 +86,27 @@ If using the advanced pipeline, create environments:
    - Click the three dots → **Approvals and checks**
    - Add **Approvals** for production
 
-## Step 5: Pipeline Configuration
+## Step 5: GitHub Integration Benefits
+
+Using GitHub as your source provides several advantages:
+
+### Automatic Sync
+- Changes to your GitHub repository automatically trigger Azure DevOps pipelines
+- No need to maintain separate Azure Repos
+- Keeps your source code in one place
+
+### Branch Protection
+- Configure branch protection rules in GitHub
+- Require pull request reviews
+- Status checks from Azure DevOps can block merges
+
+### GitHub Actions Alternative
+While Azure DevOps pulls from GitHub, you could also:
+- Use GitHub Actions for CI/CD (free tier: 2000 minutes/month)
+- Mirror from GitHub to Azure DevOps for backup
+- Use hybrid approach (GitHub Actions + Azure DevOps)
+
+## Step 6: Pipeline Configuration
 
 The pipeline is configured to:
 
@@ -88,7 +129,7 @@ The pipeline is configured to:
 - `containerRegistry`: `dock.ptslondon.co.uk`
 - `tag`: Uses build ID for versioning
 
-## Step 6: Customize for Your Needs
+## Step 7: Customize for Your Needs
 
 ### Registry Settings
 If your registry requires different settings, update these variables in the pipeline:
@@ -112,7 +153,7 @@ The advanced pipeline includes Trivy security scanning. To disable:
 - Remove the `SecurityScan` stage
 - Remove it from the `dependsOn` lists
 
-## Step 7: Verify the Setup
+## Step 8: Verify the Setup
 
 1. Make a small change to your code
 2. Push to the `develop` branch (for testing)
@@ -124,22 +165,33 @@ The advanced pipeline includes Trivy security scanning. To disable:
 
 ### Common Issues
 
-1. **Service Connection Failed**
+1. **GitHub Service Connection Failed**
+   - Verify GitHub permissions for Azure Pipelines app
+   - Check that the repository path is correct
+   - Ensure the service connection name matches (`github`)
+   - Try re-authorizing the GitHub connection
+
+2. **Service Connection Failed**
    - Verify registry credentials
    - Check registry URL format
    - Ensure registry is accessible from Azure
 
-2. **Docker Build Failed**
+2. **Docker Service Connection Failed**
    - Check Dockerfile syntax
    - Verify all required files are in repository
    - Check build logs for specific errors
 
-3. **Push to Registry Failed**
+3. **Docker Build Failed**
    - Verify service connection permissions
    - Check registry quota/space
    - Ensure repository name is correct
 
-4. **Tests Failed**
+4. **Push to Registry Failed**
+   - Verify service connection permissions
+   - Check registry quota/space
+   - Ensure repository name is correct
+
+5. **Tests Failed**
    - Check application startup logs
    - Verify port mappings
    - Ensure dependencies are available
