@@ -1,0 +1,79 @@
+trigger:
+  branches:
+    include:
+    - main
+    - develop
+  paths:
+    include:
+    - src/*
+    - templates/*
+    - requirements.txt
+    - Dockerfile
+    - config.json
+    - main.py
+
+variables:
+  # Container registry service connection established during pipeline creation
+  dockerRegistryServiceConnection: 'dock-ptslondon-connection'
+  imageRepository: 'price-tracker'
+  containerRegistry: 'dock.ptslondon.co.uk'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+  tag: '$(Build.BuildId)'
+  
+  # Agent VM image name
+  vmImageName: 'ubuntu-latest'
+
+stages:
+- stage: Build
+  displayName: Build and push stage
+  jobs:
+  - job: Build
+    displayName: Build
+    pool:
+      vmImage: $(vmImageName)
+    steps:
+    - task: Docker@2
+      displayName: Build and push Docker image
+      inputs:
+        command: buildAndPush
+        repository: $(imageRepository)
+        dockerfile: $(dockerfilePath)
+        containerRegistry: $(dockerRegistryServiceConnection)
+        tags: |
+          $(tag)
+          latest
+
+    # Optional: Run security scan on the image
+    - task: Docker@2
+      displayName: Run Trivy vulnerability scanner
+      inputs:
+        command: 'run'
+        arguments: '--rm -v /var/run/docker.sock:/var/run/docker.sock -v $(System.DefaultWorkingDirectory):/tmp/trivy aquasec/trivy image --exit-code 0 --severity HIGH,CRITICAL $(containerRegistry)/$(imageRepository):$(tag)'
+      continueOnError: true
+
+    # Optional: Test the built image
+    - task: Docker@2
+      displayName: Test Docker image
+      inputs:
+        command: 'run'
+        arguments: '--rm -d --name price-tracker-test -p 5001:5000 $(containerRegistry)/$(imageRepository):$(tag)'
+      continueOnError: true
+
+    - script: |
+        # Wait for container to start
+        sleep 10
+        # Test health endpoint
+        curl -f http://localhost:5001/ || echo "Health check failed"
+        # Cleanup test container
+        docker stop price-tracker-test || true
+      displayName: 'Health check test'
+      continueOnError: true
+
+    # Publish build artifacts
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish docker-compose and deployment files'
+      inputs:
+        PathtoPublish: '$(Build.SourcesDirectory)'
+        ArtifactName: 'deployment-files'
+        publishLocation: 'Container'
+      condition: succeeded()
