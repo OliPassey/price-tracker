@@ -7,6 +7,15 @@
         "max_concurrent_requests": 1,
         "timeout": 30,
         "retry_attempts": 3,
+        "special_pricing": {
+            "enabled": true,
+            "prefer_delivery_prices": true,
+            "detect_strikethrough": true,
+            "detect_was_now_patterns": true,
+            "detect_percentage_discounts": true,
+            "min_discount_threshold": 0.05,
+            "max_price_difference_ratio": 0.5
+        },
         "user_agents": [
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -33,25 +42,25 @@
             "base_url": "https://www.jjfoodservice.com",
             "selectors": {
                 "price": [
-                    ".price",
-                    ".product-price",
-                    "[data-testid='price']",
-                    ".price-value",
-                    ".current-price",
-                    ".product-card-price"
+                    ".price-delivery",
+                    ".delivery-price",
+                    ".price"
+                ],
+                "delivery_price": [
+                    ".price-delivery",
+                    ".delivery-price"
+                ],
+                "special_offer": [
+                    ".special-offer",
+                    ".sale-price",
+                    ".offer-price"
                 ],
                 "title": [
-                    "h1",
-                    ".product-title",
-                    ".product-name",
-                    "[data-testid='product-title']",
-                    ".product-card-title"
+                    "h1"
                 ],
                 "availability": [
                     ".stock-status",
-                    ".availability",
-                    "[data-testid='availability']",
-                    ".product-availability"
+                    ".availability"
                 ]
             }
         },
@@ -60,26 +69,25 @@
             "base_url": "https://www.atoz-catering.co.uk",
             "selectors": {
                 "price": [
-                    ".price",
-                    ".product-price",
+                    ".my-price.price-offer",
                     ".delivery-price",
-                    ".collection-price",
-                    "span:contains('£')",
-                    ".price-value"
+                    ".price"
+                ],
+                "delivery_price": [
+                    ".delivery-price",
+                    ".price-delivery"
+                ],
+                "special_offer": [
+                    ".my-price.price-offer",
+                    ".special-offer",
+                    ".sale-price"
                 ],
                 "title": [
-                    "h1",
-                    ".product-title",
-                    ".product-name",
-                    "a[href*='/products/product/']",
-                    ".product-link"
+                    "h1"
                 ],
                 "availability": [
                     ".stock-status",
-                    ".availability",
-                    ".add-to-basket",
-                    "button:contains('Add To Basket')",
-                    ".out-of-stock"
+                    ".availability"
                 ]
             }
         },
@@ -90,22 +98,18 @@
                 "price": [
                     ".a-price-whole",
                     ".a-price .a-offscreen",
+                    "#priceblock_ourprice"
+                ],
+                "special_offer": [
                     "#priceblock_dealprice",
-                    "#priceblock_ourprice",
-                    ".a-price-range",
-                    ".a-price.a-text-price.a-size-medium.apexPriceToPay",
-                    ".a-price-current"
+                    ".a-price-strike .a-offscreen",
+                    ".a-price-was"
                 ],
                 "title": [
-                    "#productTitle",
-                    ".product-title",
-                    "h1.a-size-large"
+                    "#productTitle"
                 ],
                 "availability": [
-                    "#availability span",
-                    ".a-size-medium.a-color-success",
-                    ".a-size-medium.a-color-state",
-                    "#availability .a-declarative"
+                    "#availability span"
                 ]
             }
         }
