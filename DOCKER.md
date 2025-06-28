@@ -17,7 +17,17 @@ This guide covers how to build, deploy, and run the Price Tracker application us
 ./build.sh latest your-registry.com
 ```
 
-### 2. Run with Docker Compose (Recommended)
+### 2. Configure Environment Variables (Optional)
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file with your settings
+nano .env
+```
+
+### 3. Run with Docker Compose (Recommended)
 
 ```bash
 # Start the application
@@ -30,13 +40,13 @@ docker-compose logs -f
 docker-compose down
 ```
 
-### 3. Manual Docker Run
+### 4. Manual Docker Run
 
 ```bash
 # Create directories for persistence
 mkdir -p data logs
 
-# Run the container
+# Run with environment variables
 docker run -d \
   --name price-tracker \
   --restart unless-stopped \
@@ -45,7 +55,79 @@ docker run -d \
   -v $(pwd)/logs:/app/logs \
   -v $(pwd)/config.json:/app/config.json:ro \
   -e FLASK_ENV=production \
+  -e DATABASE_PATH=/app/data/price_tracker.db \
+  -e EMAIL_ENABLED=true \
+  -e SMTP_SERVER=smtp.gmail.com \
+  -e SENDER_EMAIL=your-email@gmail.com \
+  -e SENDER_PASSWORD=your-app-password \
+  -e RECIPIENT_EMAIL=alerts@yourdomain.com \
   price-tracker:latest
+```
+
+## Environment Variable Configuration
+
+The application supports environment variable overrides for flexible deployment configurations. This allows you to customize settings without modifying the `config.json` file.
+
+### Available Environment Variables
+
+#### Database Configuration
+- `DATABASE_PATH` - Path to SQLite database file (default: `/app/data/price_tracker.db`)
+
+#### Scraping Configuration
+- `DELAY_BETWEEN_REQUESTS` - Delay between requests in seconds (default: `2`)
+- `MAX_CONCURRENT_REQUESTS` - Maximum concurrent requests (default: `1`)
+- `REQUEST_TIMEOUT` - Request timeout in seconds (default: `30`)
+- `RETRY_ATTEMPTS` - Number of retry attempts (default: `3`)
+
+#### Email Notifications
+- `EMAIL_ENABLED` - Enable email notifications (`true`/`false`)
+- `SMTP_SERVER` - SMTP server hostname (e.g., `smtp.gmail.com`)
+- `SMTP_PORT` - SMTP server port (e.g., `587`)
+- `SENDER_EMAIL` - Email address to send from
+- `SENDER_PASSWORD` - Email password or app password
+- `RECIPIENT_EMAIL` - Email address to send alerts to
+
+#### Webhook Notifications
+- `WEBHOOK_ENABLED` - Enable webhook notifications (`true`/`false`)
+- `WEBHOOK_URL` - Webhook URL for sending alerts
+
+### Configuration Priority
+
+Environment variables take precedence over `config.json` settings:
+1. **Environment Variables** (highest priority)
+2. **config.json** file (fallback)
+
+### Using .env Files
+
+Create a `.env` file from the example:
+
+```bash
+cp .env.example .env
+```
+
+Edit the `.env` file with your settings:
+
+```env
+# Database
+DATABASE_PATH=/app/data/price_tracker.db
+
+# Email notifications
+EMAIL_ENABLED=true
+SMTP_SERVER=smtp.gmail.com
+SMTP_PORT=587
+SENDER_EMAIL=alerts@mydomain.com
+SENDER_PASSWORD=my-app-password
+RECIPIENT_EMAIL=me@mydomain.com
+
+# Scraping
+DELAY_BETWEEN_REQUESTS=3
+MAX_CONCURRENT_REQUESTS=2
+```
+
+Docker Compose will automatically load the `.env` file:
+
+```bash
+docker-compose up -d
 ```
 
 ## Registry Deployment

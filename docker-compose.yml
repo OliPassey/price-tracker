@@ -5,11 +5,30 @@ services:
     build: .
     container_name: price-tracker
     restart: unless-stopped
+    env_file:
+      - .env  # Load environment variables from .env file (optional)
     ports:
       - "5000:5000"
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
+      # Database configuration
+      - DATABASE_PATH=/app/data/price_tracker.db
+      # Scraping configuration
+      - DELAY_BETWEEN_REQUESTS=2
+      - MAX_CONCURRENT_REQUESTS=1
+      - REQUEST_TIMEOUT=30
+      - RETRY_ATTEMPTS=3
+      # Email notifications (uncomment and set values to enable)
+      # - EMAIL_ENABLED=true
+      # - SMTP_SERVER=smtp.gmail.com
+      # - SMTP_PORT=587
+      # - SENDER_EMAIL=your-email@gmail.com
+      # - SENDER_PASSWORD=your-app-password
+      # - RECIPIENT_EMAIL=alerts@yourdomain.com
+      # Webhook notifications (uncomment and set URL to enable)
+      # - WEBHOOK_ENABLED=true
+      # - WEBHOOK_URL=https://your-webhook-url.com/notify
     volumes:
       # Mount database and logs for persistence
       - ./data:/app/data
