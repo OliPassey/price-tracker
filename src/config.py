@@ -4,8 +4,14 @@ Configuration management for the price tracker
 
 import json
 import os
+import logging
 from typing import Dict, Any, Optional
 from pathlib import Path
+
+
+class ConfigError(Exception):
+    """Custom exception for configuration errors."""
+    pass
 
 
 class Config:
@@ -13,17 +19,176 @@ class Config:
     
     def __init__(self, config_path: Optional[str] = None):
         self.config_path = config_path or "config.json"
+        self._config_error = None
         self._config = self._load_config()
         self._apply_env_overrides()
     
+    def _get_default_config(self) -> Dict[str, Any]:
+        """Return a minimal default configuration."""
+        return {
+            "database": {
+                "path": "price_tracker.db"
+            },
+            "scraping": {
+                "delay_between_requests": 2,
+                "max_concurrent_requests": 1,
+                "timeout": 30,
+                "retry_attempts": 3,
+                "user_agents": [
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                ]
+            },
+            "notifications": {
+                "email": {
+                    "enabled": False,
+                    "smtp_server": "smtp.gmail.com",
+                    "smtp_port": 587,
+                    "smtp_username": "",
+                    "smtp_password": "",
+                    "sender_email": "",
+                    "sender_password": "",
+                    "recipient_email": ""
+                },
+                "webhook": {
+                    "enabled": False,
+                    "url": ""
+                }
+            },
+            "sites": {}
+        }
+    
     def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from JSON file."""
+        """Load configuration from JSON file with fallback to defaults."""
         config_file = Path(self.config_path)
-        if not config_file.exists():
-            raise FileNotFoundError(f"Config file not found: {self.config_path}")
         
-        with open(config_file, 'r') as f:
-            return json.load(f)
+        # Check if file exists
+        if not config_file.exists():
+            self._config_error = f"Configuration file not found: {self.config_path}"
+            logging.warning(f"Config file not found: {self.config_path}. Using default configuration.")
+            return self._get_default_config()
+        
+        # Try to load and parse the file
+        try:
+            with open(config_file, 'r') as f:
+                content = f.read().strip()
+                if not content:
+                    self._config_error = f"Configuration file is empty: {self.config_path}"
+                    logging.warning(f"Config file is empty: {self.config_path}. Using default configuration.")
+                    return self._get_default_config()
+                
+                config = json.loads(content)
+                if not isinstance(config, dict):
+                    self._config_error = f"Configuration file must contain a JSON object: {self.config_path}"
+                    logging.warning(f"Invalid config structure in {self.config_path}. Using default configuration.")
+                    return self._get_default_config()
+                
+                return config
+                
+        except json.JSONDecodeError as e:
+            self._config_error = f"Invalid JSON in configuration file {self.config_path}: {str(e)}"
+            logging.warning(f"JSON parsing error in {self.config_path}: {str(e)}. Using default configuration.")
+            return self._get_default_config()
+        except Exception as e:
+            self._config_error = f"Error reading configuration file {self.config_path}: {str(e)}"
+            logging.warning(f"Error reading {self.config_path}: {str(e)}. Using default configuration.")
+            return self._get_default_config()
+    
+    def has_config_error(self) -> bool:
+        """Check if there was an error loading the configuration."""
+        return self._config_error is not None
+    
+    def get_config_error(self) -> Optional[str]:
+        """Get the configuration error message if any."""
+        return self._config_error
+    
+    def create_default_config_file(self) -> bool:
+        """Create a default configuration file."""
+        try:
+            default_config = {
+                "database": {
+                    "path": "price_tracker.db"
+                },
+                "scraping": {
+                    "delay_between_requests": 2,
+                    "max_concurrent_requests": 1,
+                    "timeout": 30,
+                    "retry_attempts": 3,
+                    "special_pricing": {
+                        "enabled": True,
+                        "prefer_delivery_prices": True,
+                        "detect_strikethrough": True,
+                        "detect_was_now_patterns": True,
+                        "detect_percentage_discounts": True,
+                        "min_discount_threshold": 0.05,
+                        "max_price_difference_ratio": 0.5
+                    },
+                    "user_agents": [
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                    ]
+                },
+                "notifications": {
+                    "email": {
+                        "enabled": False,
+                        "smtp_server": "smtp.gmail.com",
+                        "smtp_port": 587,
+                        "smtp_username": "",
+                        "smtp_password": "",
+                        "sender_email": "",
+                        "sender_password": "",
+                        "recipient_email": ""
+                    },
+                    "webhook": {
+                        "enabled": False,
+                        "url": ""
+                    }
+                },
+                "sites": {
+                    "jjfoodservice": {
+                        "enabled": True,
+                        "base_url": "https://www.jjfoodservice.com",
+                        "selectors": {
+                            "price": [".price-delivery", ".delivery-price", ".price"],
+                            "delivery_price": [".price-delivery", ".delivery-price"],
+                            "special_offer": [".special-offer", ".sale-price", ".offer-price"],
+                            "title": ["h1"],
+                            "availability": [".stock-status", ".availability"]
+                        }
+                    },
+                    "atoz_catering": {
+                        "enabled": True,
+                        "base_url": "https://www.atoz-catering.co.uk",
+                        "selectors": {
+                            "price": [".my-price.price-offer", ".delivery-price", ".price"],
+                            "delivery_price": [".delivery-price", ".price-delivery"],
+                            "special_offer": [".my-price.price-offer", ".special-offer", ".sale-price"],
+                            "title": ["h1"],
+                            "availability": [".stock-status", ".availability"]
+                        }
+                    },
+                    "amazon_uk": {
+                        "enabled": True,
+                        "base_url": "https://www.amazon.co.uk",
+                        "selectors": {
+                            "price": [".a-price-whole", ".a-price .a-offscreen", "#priceblock_ourprice"],
+                            "special_offer": ["#priceblock_dealprice", ".a-price-strike .a-offscreen", ".a-price-was"],
+                            "title": ["#productTitle"],
+                            "availability": ["#availability span"]
+                        }
+                    }
+                }
+            }
+            
+            with open(self.config_path, 'w') as f:
+                json.dump(default_config, f, indent=4)
+            
+            logging.info(f"Created default configuration file: {self.config_path}")
+            return True
+            
+        except Exception as e:
+            logging.error(f"Failed to create default config file: {str(e)}")
+            return False
     
     def _apply_env_overrides(self):
         """Apply environment variable overrides to configuration."""

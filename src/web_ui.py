@@ -30,8 +30,41 @@ def create_app():
     app = Flask(__name__, template_folder=template_dir)
     app.config['SECRET_KEY'] = 'your-secret-key-change-this'
     
-    # Initialize components
+    # Initialize configuration with error handling
     config = Config()
+    
+    # Check for configuration errors
+    if config.has_config_error():
+        @app.route('/')
+        def setup_required():
+            """Show setup page when configuration is missing or invalid."""
+            return render_template('setup.html', 
+                                 error=config.get_config_error(),
+                                 config_path=config.config_path)
+        
+        @app.route('/create-config', methods=['POST'])
+        def create_config():
+            """Create a default configuration file."""
+            success = config.create_default_config_file()
+            if success:
+                return jsonify({
+                    'success': True, 
+                    'message': 'Default configuration file created successfully. Please restart the application.'
+                })
+            else:
+                return jsonify({
+                    'success': False, 
+                    'message': 'Failed to create configuration file. Check file permissions.'
+                })
+        
+        @app.route('/health')
+        def health_check():
+            """Health check endpoint."""
+            return jsonify({'status': 'error', 'message': 'Configuration required'})
+        
+        return app
+    
+    # Initialize other components only if config is valid
     db_manager = DatabaseManager(config.database_path)
     scraper_manager = ScraperManager(config)
     notification_manager = NotificationManager(config)
