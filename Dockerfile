@@ -10,6 +10,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     FLASK_APP=main.py \
     FLASK_ENV=production
 
+# Optional: Set default configuration via environment variables
+# These can be overridden when running the container
+ENV DATABASE_PATH=/app/data/price_tracker.db \
+    DELAY_BETWEEN_REQUESTS=2 \
+    MAX_CONCURRENT_REQUESTS=1 \
+    REQUEST_TIMEOUT=30 \
+    RETRY_ATTEMPTS=3
+
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \

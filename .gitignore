@@ -134,3 +134,4 @@ price_tracker.db
 config-local.json
 .vscode/
 .idea/
+config.json
