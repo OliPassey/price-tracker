@@ -1,8 +1,12 @@
-# Use Python 3.12 slim image for smaller size
-FROM python:3.12-slim
+# Use Python 3.11 slim image (revert from 3.12)
+FROM python:3.11-slim
 
-# Install cron
-RUN apt-get update && apt-get install -y cron && rm -rf /var/lib/apt/lists/*
+# Install cron and other dependencies
+RUN apt-get update && apt-get install -y \
+    cron \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -14,18 +18,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     FLASK_ENV=production
 
 # Optional: Set default configuration via environment variables
-# These can be overridden when running the container
 ENV DATABASE_PATH=/app/data/price_tracker.db \
     DELAY_BETWEEN_REQUESTS=2 \
     MAX_CONCURRENT_REQUESTS=1 \
     REQUEST_TIMEOUT=30 \
     RETRY_ATTEMPTS=3
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -34,8 +31,12 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Create non-root user for security
-RUN useradd --create-home --shell /bin/bash tracker && \
-    chown -R tracker:tracker /app
+RUN useradd --create-home --shell /bin/bash tracker
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /app/data /var/log && \
+    chmod 755 /app/data /var/log && \
+    chown -R tracker:tracker /app/data /var/log
 
 # Copy application code
 COPY . .
@@ -113,13 +114,22 @@ RUN echo "0 8 * * * cd /app && python daily_scraper.py >> /var/log/cron.log 2>&1
 RUN chmod 0644 /etc/cron.d/price-tracker
 RUN crontab /etc/cron.d/price-tracker
 
-# Create startup script
+# Create startup script that ensures directories exist and have correct permissions
 RUN echo '#!/bin/bash\n\
+# Ensure data directory exists and has correct permissions\n\
+mkdir -p /app/data /var/log\n\
+chown -R tracker:tracker /app/data /var/log\n\
+chmod 755 /app/data /var/log\n\
+\n\
 # Start cron in background\n\
 cron\n\
-# Start web server in foreground\n\
-exec python main.py --mode web\n\
+\n\
+# Switch to non-root user and start web server\n\
+exec su tracker -c "python main.py --mode web"\n\
 ' > /app/start.sh && chmod +x /app/start.sh
+
+# Set ownership for application files
+RUN chown -R tracker:tracker /app
 
 # Expose port
 EXPOSE 5000
