@@ -53,7 +53,10 @@ class NotificationManager:
             # Send email
             server = smtplib.SMTP(email_config.get('smtp_server'), email_config.get('smtp_port'))
             server.starttls()
-            server.login(email_config.get('sender_email'), email_config.get('sender_password'))
+            # Use SMTP credentials from config (may be different from sender email)
+            smtp_username = email_config.get('smtp_username') or email_config.get('sender_email')
+            smtp_password = email_config.get('smtp_password') or email_config.get('sender_password')
+            server.login(smtp_username, smtp_password)
             
             text = msg.as_string()
             server.sendmail(email_config.get('sender_email'), 
@@ -190,3 +193,46 @@ class NotificationManager:
                 test_result['webhook']['error'] = str(e)
         
         return test_result
+    
+    def send_email(self, subject: str, message: str, html_message: str = None) -> bool:
+        """Send a simple email notification (synchronous version)."""
+        email_config = self.notification_config.get('email', {})
+        
+        if not email_config.get('enabled', False):
+            logger.warning("Email notifications are disabled")
+            return False
+        
+        try:
+            # Create message
+            msg = MIMEMultipart('alternative')
+            msg['From'] = email_config.get('sender_email')
+            msg['To'] = email_config.get('recipient_email')
+            msg['Subject'] = subject
+            
+            # Add text content
+            if message:
+                msg.attach(MIMEText(message, 'plain'))
+            
+            # Add HTML content if provided
+            if html_message:
+                msg.attach(MIMEText(html_message, 'html'))
+            
+            # Send email
+            server = smtplib.SMTP(email_config.get('smtp_server'), email_config.get('smtp_port'))
+            server.starttls()
+            # Use SMTP credentials from config (may be different from sender email)
+            smtp_username = email_config.get('smtp_username') or email_config.get('sender_email')
+            smtp_password = email_config.get('smtp_password') or email_config.get('sender_password')
+            server.login(smtp_username, smtp_password)
+            
+            text = msg.as_string()
+            server.sendmail(email_config.get('sender_email'), 
+                          email_config.get('recipient_email'), text)
+            server.quit()
+            
+            logger.info(f"Email sent successfully: {subject}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to send email: {e}")
+            return False

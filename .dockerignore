@@ -75,3 +75,4 @@ examples/
 # Old files
 *_old.py
 *.bak
+config.json
