@@ -110,7 +110,7 @@ if __name__ == "__main__":\n\
 ' > /app/daily_scraper.py && chmod +x /app/daily_scraper.py
 
 # Create cron job - runs daily at 8 AM
-RUN echo "0 8 * * * cd /app && python daily_scraper.py >> /var/log/cron.log 2>&1" > /etc/cron.d/price-tracker
+RUN echo "0 15 * * * cd /app && python daily_scraper.py >> /var/log/cron.log 2>&1" > /etc/cron.d/price-tracker
 RUN chmod 0644 /etc/cron.d/price-tracker
 RUN crontab /etc/cron.d/price-tracker
 
