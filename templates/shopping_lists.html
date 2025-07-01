@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Smart Shopping Lists{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="mb-4">
+                <i class="fas fa-shopping-cart"></i> Smart Shopping Lists
+                <small class="text-muted">- Automated best price recommendations</small>
+            </h1>
+            
+            <!-- Summary Card -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="card border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-chart-line"></i> Shopping Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-primary">{{ summary.total_products }}</h3>
+                                        <p class="mb-0">Total Products</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-success">£{{ "%.2f"|format(summary.total_cost) }}</h3>
+                                        <p class="mb-0">Total Cost</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-info">£{{ "%.2f"|format(summary.total_savings) }}</h3>
+                                        <p class="mb-0">Total Savings</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        <h3 class="text-warning">{{ summary.store_count }}</h3>
+                                        <p class="mb-0">Stores to Visit</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% if summary.most_items_store %}
+                            <div class="row mt-3">
+                                <div class="col-md-12">
+                                    <div class="alert alert-info mb-0">
+                                        <i class="fas fa-star"></i> 
+                                        <strong>{{ summary.most_items_store }}</strong> has the most items ({{ summary.most_items_count }}) - consider starting there!
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="btn-group" role="group">
+                        <form style="display: inline;" method="POST" action="{{ url_for('send_daily_shopping_list') }}">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-envelope"></i> Send Daily Email
+                            </button>
+                        </form>
+                        <a href="{{ url_for('api_shopping_lists') }}" class="btn btn-info" target="_blank">
+                            <i class="fas fa-code"></i> API Data
+                        </a>
+                        <button class="btn btn-secondary" onclick="window.print()">
+                            <i class="fas fa-print"></i> Print Lists
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Shopping Lists by Store -->
+            {% if shopping_lists %}
+                <div class="row">
+                    {% for store_list in shopping_lists %}
+                    <div class="col-md-6 col-lg-4 mb-4">
+                        <div class="card h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-store"></i> {{ store_list.store_display_name }}
+                                </h5>
+                                <span class="badge badge-primary">{{ store_list.item_count }} items</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <strong>Total Cost:</strong><br>
+                                        <span class="h5 text-success">£{{ "%.2f"|format(store_list.total_cost) }}</span>
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Savings:</strong><br>
+                                        <span class="h5 text-info">£{{ "%.2f"|format(store_list.total_savings) }}</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Top Items Preview -->
+                                <div class="mb-3">
+                                    <h6>Items to Buy:</h6>
+                                    <ul class="list-group list-group-flush">
+                                        {% for item in store_list.items[:3] %}
+                                        <li class="list-group-item p-2 border-0">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-truncate" style="max-width: 200px;" title="{{ item.product_name }}">
+                                                    {{ item.product_name }}
+                                                </span>
+                                                <span class="text-success font-weight-bold">
+                                                    £{{ "%.2f"|format(item.current_price) }}
+                                                </span>
+                                            </div>
+                                            {% if item.savings_vs_most_expensive > 0 %}
+                                            <small class="text-muted">
+                                                Saves £{{ "%.2f"|format(item.savings_vs_most_expensive) }}
+                                            </small>
+                                            {% endif %}
+                                        </li>
+                                        {% endfor %}
+                                        {% if store_list.items|length > 3 %}
+                                        <li class="list-group-item p-2 border-0 text-muted">
+                                            ... and {{ store_list.items|length - 3 }} more items
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="card-footer">
+                                <div class="btn-group w-100" role="group">
+                                    <a href="{{ url_for('shopping_list_detail', store_name=store_list.store_name) }}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fas fa-list"></i> Full List
+                                    </a>
+                                    {% if store_list.base_url %}
+                                    <a href="{{ store_list.base_url }}" target="_blank" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-external-link-alt"></i> Visit Store
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning">
+                            <h4><i class="fas fa-exclamation-triangle"></i> No Shopping Data Available</h4>
+                            <p>No price data found to generate shopping lists. Make sure you have:</p>
+                            <ul>
+                                <li>Added products to track</li>
+                                <li>Run the scraper to collect price data</li>
+                                <li>Products have valid prices from at least one store</li>
+                            </ul>
+                            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Products
+                            </a>
+                            <form style="display: inline;" method="POST" action="{{ url_for('scrape_all_products') }}">
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-search"></i> Run Scraper
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Help Section -->
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-question-circle"></i> How Smart Shopping Lists Work</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-brain"></i> Automatic Analysis</h6>
+                            <p>The system automatically analyzes all your tracked products and finds the store with the lowest current price for each item.</p>
+                            
+                            <h6><i class="fas fa-map-marked-alt"></i> Store Grouping</h6>
+                            <p>Products are grouped by store, so you know exactly what to buy from each location for maximum savings.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-calculator"></i> Savings Calculation</h6>
+                            <p>See how much you save compared to buying each item at the most expensive store.</p>
+                            
+                            <h6><i class="fas fa-envelope"></i> Daily Notifications</h6>
+                            <p>Set up daily email notifications to get your optimized shopping list delivered automatically.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .btn-group, .card-footer, .alert-warning, .card:last-child {
+        display: none !important;
+    }
+    .card {
+        break-inside: avoid;
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}

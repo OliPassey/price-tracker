@@ -6,12 +6,14 @@ A comprehensive web scraper for tracking product prices across multiple e-commer
 
 - **Multi-site Price Tracking**: Monitor prices across JJ Food Service, A to Z Catering, and Amazon UK
 - **Beautiful Web UI**: Clean, responsive interface for managing products and viewing price history
+- **Daily Shopping Lists**: Automatically generate shopping lists with the best prices for each store
 - **Price Alerts**: Get notified when products reach your target price
 - **Historical Data**: View price trends with interactive charts
 - **Automated Scraping**: Schedule regular price checks
-- **Multiple Notifications**: Email and webhook notifications
+- **Multiple Notifications**: Email and webhook notifications for price alerts and shopping lists
 - **Robust Scraping**: Built-in retry logic, rotating user agents, and rate limiting
 - **Special Pricing Detection**: Automatically detects and prioritizes delivery prices and special offers
+- **Smart Shopping**: Compare prices across stores and get recommendations for the best deals
 
 ## Quick Start 🚀
 
@@ -37,6 +39,7 @@ A comprehensive web scraper for tracking product prices across multiple e-commer
 
 The web interface provides:
 - **Dashboard**: Overview of all tracked products with current prices
+- **Shopping Lists**: Daily shopping lists showing the best deals for each store
 - **Add Products**: Easy form to add new products with URLs from multiple sites
 - **Product Details**: Detailed view with price history charts and statistics
 - **Settings**: Configuration management and system health checks
@@ -256,3 +259,46 @@ This project is for educational purposes. Please review the terms of service of 
 ---
 
 **Happy price tracking! 🛍️**
+
+## Shopping Lists 🛍️
+
+The price tracker automatically generates daily shopping lists showing the best deals for each store:
+
+### Features
+- **Best Price Selection**: Automatically finds the lowest current price for each product
+- **Store-Specific Lists**: Separate shopping lists for each tracked store
+- **Savings Calculation**: Shows how much you save compared to target prices
+- **Customizable Preferences**: Set minimum savings thresholds, maximum items, and delivery schedules
+- **Multiple Formats**: View online, print, export to CSV, or email daily lists
+
+### Daily Automation
+Set up automatic daily shopping lists:
+
+```bash
+# Generate and send shopping lists manually
+python shopping_list_scheduler.py --force
+
+# Test without sending (dry run)
+python shopping_list_scheduler.py --dry-run
+
+# Set up daily cron job (9 AM daily)
+echo "0 9 * * * cd /path/to/price-tracker && python shopping_list_scheduler.py" | crontab -
+```
+
+### Shopping List Preferences
+
+For each store, you can configure:
+- **Enable/Disable**: Turn shopping lists on/off per store
+- **Minimum Savings**: Only include items with savings above threshold
+- **Maximum Items**: Limit list size to avoid overwhelming
+- **Out of Stock**: Include/exclude unavailable items
+- **Delivery Time**: Schedule when to send daily lists
+- **Notifications**: Email and/or webhook delivery
+
+### Web Interface
+
+Access shopping lists via the web interface:
+- **View All Lists**: See current shopping lists for all stores
+- **Store Details**: Detailed view with full product information
+- **Send Immediately**: Manually trigger email/webhook delivery
+- **Manage Preferences**: Configure settings per store

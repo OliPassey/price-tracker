@@ -18,6 +18,7 @@ from .database import DatabaseManager
 from .config import Config
 from .scraper_manager import ScraperManager
 from .notification import NotificationManager
+from .shopping_list import AutoShoppingListGenerator
 from .utils import format_price, group_results_by_status
 
 
@@ -68,6 +69,7 @@ def create_app():
     db_manager = DatabaseManager(config.database_path)
     scraper_manager = ScraperManager(config)
     notification_manager = NotificationManager(config)
+    shopping_list_generator = AutoShoppingListGenerator(db_manager, notification_manager)
     
     class ProductForm(FlaskForm):
         name = StringField('Product Name', validators=[DataRequired()])
@@ -366,5 +368,110 @@ def create_app():
             flash(f'Error deleting product: {str(e)}', 'error')
         
         return redirect(url_for('index'))
+    
+    @app.route('/shopping-lists')
+    def shopping_lists():
+        """Display automated shopping lists based on best prices."""
+        try:
+            shopping_lists = shopping_list_generator.generate_shopping_lists()
+            summary = shopping_list_generator.get_summary_stats()
+            
+            return render_template('shopping_lists.html', 
+                                 shopping_lists=shopping_lists,
+                                 summary=summary)
+        except Exception as e:
+            flash(f'Error generating shopping lists: {str(e)}', 'danger')
+            return redirect(url_for('index'))
+    
+    @app.route('/shopping-list/<store_name>')
+    def shopping_list_detail(store_name):
+        """Display detailed shopping list for a specific store."""
+        try:
+            shopping_lists = shopping_list_generator.generate_shopping_lists()
+            store_list = next((sl for sl in shopping_lists if sl.store_name == store_name), None)
+            
+            if not store_list:
+                flash(f'No items found for {store_name}', 'warning')
+                return redirect(url_for('shopping_lists'))
+            
+            return render_template('shopping_list_detail.html',
+                                 shopping_list=store_list,
+                                 store_name=store_name)
+        except Exception as e:
+            flash(f'Error loading shopping list: {str(e)}', 'danger')
+            return redirect(url_for('shopping_lists'))
+    
+    @app.route('/send-daily-shopping-list', methods=['POST'])
+    def send_daily_shopping_list():
+        """Send daily shopping list via email/webhook."""
+        try:
+            success = shopping_list_generator.send_daily_shopping_list()
+            
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Daily shopping list sent successfully'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to send daily shopping list. Check notification settings.'
+                })
+                
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    
+    @app.route('/api/shopping-lists')
+    def api_shopping_lists():
+        """API endpoint for shopping lists data."""
+        try:
+            shopping_lists = shopping_list_generator.generate_shopping_lists()
+            summary = shopping_list_generator.get_summary_stats()
+            
+            # Convert to JSON-serializable format
+            data = {
+                'summary': {
+                    'total_products': summary['total_products'],
+                    'total_cost': summary['total_cost'],
+                    'total_savings': summary['total_savings'],
+                    'store_count': summary['store_count'],
+                    'most_items_store': summary['most_items_store'],
+                    'most_items_count': summary['most_items_count'],
+                    'generated_at': summary['generated_at'].isoformat()
+                },
+                'store_lists': []
+            }
+            
+            for store_list in shopping_lists:
+                store_data = {
+                    'store_name': store_list.store_name,
+                    'store_display_name': store_list.store_display_name,
+                    'base_url': store_list.base_url,
+                    'total_cost': store_list.total_cost,
+                    'total_savings': store_list.total_savings,
+                    'item_count': store_list.item_count,
+                    'items': []
+                }
+                
+                for item in store_list.items:
+                    item_data = {
+                        'product_id': item.product_id,
+                        'product_name': item.product_name,
+                        'current_price': item.current_price,
+                        'store_url': item.store_url,
+                        'last_updated': item.last_updated.isoformat(),
+                        'savings_vs_most_expensive': item.savings_vs_most_expensive
+                    }
+                    store_data['items'].append(item_data)
+                
+                data['store_lists'].append(store_data)
+            
+            return jsonify(data)
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+            
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     return app

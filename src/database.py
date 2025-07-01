@@ -235,3 +235,7 @@ class DatabaseManager:
                 }
             
             return stats
+        
+    def get_connection(self):
+        """Get a database connection."""
+        return sqlite3.connect(self.db_path)

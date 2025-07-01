@@ -83,6 +83,47 @@ async def run_scraper():
         raise
 
 
+def run_shopping_lists():
+    """Generate and optionally send daily shopping lists."""
+    from src.config import Config
+    from src.database import DatabaseManager
+    from src.notification import NotificationManager
+    from src.shopping_list import AutoShoppingListGenerator
+    
+    config = Config()
+    db_manager = DatabaseManager(config.database_path)
+    notification_manager = NotificationManager(config)
+    shopping_generator = AutoShoppingListGenerator(db_manager, notification_manager)
+    
+    print("🛒 Generating automated shopping lists...")
+    
+    # Generate shopping lists
+    shopping_lists = shopping_generator.generate_shopping_lists()
+    summary = shopping_generator.get_summary_stats()
+    
+    # Display results
+    print(f"\n📊 Summary:")
+    print(f"  • {summary['total_products']} products tracked")
+    print(f"  • £{summary['total_cost']:.2f} total cost")
+    print(f"  • £{summary['total_savings']:.2f} total savings")
+    print(f"  • {summary['store_count']} stores involved")
+    
+    for store_list in shopping_lists:
+        print(f"\n🏪 {store_list.store_display_name}: {store_list.item_count} items (£{store_list.total_cost:.2f})")
+    
+    # Send daily list if email is configured
+    email_config = config.notification_config.get('email', {})
+    if email_config.get('enabled') and email_config.get('recipient_email'):
+        print(f"\n📧 Sending daily shopping list...")
+        success = shopping_generator.send_daily_shopping_list()
+        if success:
+            print(f"✅ Shopping list sent successfully!")
+        else:
+            print(f"❌ Failed to send shopping list")
+    
+    return shopping_lists
+
+
 def run_web_ui():
     """Run the web UI for managing products and viewing price history."""
     import os
@@ -99,14 +140,16 @@ def run_web_ui():
 
 def main():
     parser = argparse.ArgumentParser(description='Price Tracker')
-    parser.add_argument('--mode', choices=['scrape', 'web'], default='web',
-                       help='Run mode: scrape prices or start web UI')
+    parser.add_argument('--mode', choices=['scrape', 'web', 'shopping'], default='web',
+                       help='Run mode: scrape prices, start web UI, or generate shopping lists')
     parser.add_argument('--config', help='Path to config file')
     
     args = parser.parse_args()
     
     if args.mode == 'scrape':
         asyncio.run(run_scraper())
+    elif args.mode == 'shopping':
+        run_shopping_lists()
     else:
         run_web_ui()
 
