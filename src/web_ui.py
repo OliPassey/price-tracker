@@ -13,6 +13,10 @@ import plotly
 import plotly.graph_objs as go
 import pandas as pd
 import os
+import hmac
+import hashlib
+from functools import wraps
+from flask import request, jsonify
 
 from .database import DatabaseManager
 from .config import Config
@@ -474,4 +478,240 @@ def create_app():
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    # Add webhook authentication decorator
+    def webhook_auth_required(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            # Get webhook secret from environment
+            webhook_secret = os.environ.get('WEBHOOK_SECRET', 'your-secret-key-here')
+            
+            # Check for secret in header or query parameter
+            provided_secret = request.headers.get('X-Webhook-Secret') or request.args.get('secret')
+            
+            if not provided_secret or provided_secret != webhook_secret:
+                return jsonify({'error': 'Unauthorized'}), 401
+            
+            return f(*args, **kwargs)
+        return decorated_function
+
+    # Add webhook routes
+    @app.route('/webhook/scrape', methods=['POST', 'GET'])
+    @webhook_auth_required
+    def webhook_scrape():
+        """Webhook endpoint to trigger price scraping"""
+        try:
+            # Run scraping in background
+            import asyncio
+            from .scraper_manager import ScraperManager
+            from .notification import NotificationManager
+            
+            async def run_scrape():
+                try:
+                    logger.info("Webhook triggered price scraping")
+                    
+                    config = Config()
+                    if config.has_config_error():
+                        logger.error(f"Configuration error: {config.get_config_error()}")
+                        return {'error': 'Configuration error'}
+                    
+                    db_manager = DatabaseManager(config.database_path)
+                    scraper_manager = ScraperManager(config)
+                    notification_manager = NotificationManager(config)
+                    
+                    products = db_manager.get_all_products()
+                    if not products:
+                        logger.warning("No products found to scrape")
+                        return {'message': 'No products to scrape'}
+                    
+                    logger.info(f"Scraping {len(products)} products")
+                    results = await scraper_manager.scrape_all_products(products)
+                    
+                    total = sum(len(sites) for sites in results.values())
+                    successful = sum(1 for sites in results.values() for result in sites.values() if result['success'])
+                    failed = total - successful
+                    
+                    logger.info(f"Scraping complete: {successful}/{total} successful")
+                    
+                    # Save results and collect price alerts
+                    price_alerts = []
+                    for product_id, site_results in results.items():
+                        product = db_manager.get_product(product_id)
+                        for site_name, result in site_results.items():
+                            if result['success']:
+                                # Save to database
+                                db_manager.save_price_history(
+                                    product_id=product_id,
+                                    site_name=site_name,
+                                    price=result['price'],
+                                    availability=result.get('availability', True),
+                                    timestamp=datetime.now()
+                                )
+                                
+                                # Check for price alerts
+                                if product and product.get('target_price') and result['price'] <= product['target_price']:
+                                    price_alerts.append({
+                                        'product': product,
+                                        'site': site_name,
+                                        'current_price': result['price'],
+                                        'target_price': product['target_price'],
+                                        'url': result.get('url', '')
+                                    })
+                    
+                    # Send price alerts if any
+                    if price_alerts:
+                        alert_message = "Price Alerts:\n\n"
+                        for alert in price_alerts:
+                            alert_message += f"🎯 {alert['product']['name']}\n"
+                            alert_message += f"   Store: {alert['site']}\n"
+                            alert_message += f"   Price: £{alert['current_price']} (Target: £{alert['target_price']})\n"
+                            alert_message += f"   URL: {alert['url']}\n\n"
+                        
+                        await notification_manager.send_notification(
+                            subject=f"Price Alert: {len(price_alerts)} item(s) on sale!",
+                            message=alert_message
+                        )
+                        logger.info(f"Sent price alerts for {len(price_alerts)} items")
+                    
+                    # Send scraping summary
+                    summary_message = f"Daily Price Scraping Summary:\n\n"
+                    summary_message += f"📊 Products scraped: {len(products)}\n"
+                    summary_message += f"✅ Successful: {successful}\n"
+                    summary_message += f"❌ Failed: {failed}\n"
+                    summary_message += f"🎯 Price alerts: {len(price_alerts)}\n"
+                    summary_message += f"🕐 Completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+                    
+                    await notification_manager.send_notification(
+                        subject="Daily Price Scraping Complete",
+                        message=summary_message
+                    )
+                    logger.info("Sent scraping summary")
+                    
+                    return {
+                        'message': 'Scraping completed successfully',
+                        'total_products': len(products),
+                        'successful': successful,
+                        'failed': failed,
+                        'price_alerts': len(price_alerts)
+                    }
+                    
+                except Exception as e:
+                    logger.error(f"Webhook scraping failed: {str(e)}", exc_info=True)
+                    
+                    # Send error notification
+                    try:
+                        await notification_manager.send_notification(
+                            subject="Price Scraping Failed",
+                            message=f"Daily price scraping failed with error:\n\n{str(e)}"
+                        )
+                    except:
+                        pass
+                    
+                    return {'error': str(e)}
+            
+            # Run the async function
+            result = asyncio.run(run_scrape())
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            logger.error(f"Webhook error: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/webhook/shopping-list', methods=['POST', 'GET'])
+    @webhook_auth_required
+    def webhook_shopping_list():
+        """Webhook endpoint to send daily shopping list"""
+        try:
+            from .shopping_list import AutoShoppingListGenerator
+            from .notification import NotificationManager
+            
+            config = Config()
+            if config.has_config_error():
+                return jsonify({'error': 'Configuration error'}), 500
+            
+            db_manager = DatabaseManager(config.database_path)
+            shopping_list_generator = AutoShoppingListGenerator(db_manager)
+            notification_manager = NotificationManager(config)
+            
+            # Generate shopping lists
+            shopping_lists = shopping_list_generator.generate_all_shopping_lists()
+            
+            if shopping_lists:
+                shopping_message = "Daily Shopping List (Best Prices):\n\n"
+                total_savings = 0
+                
+                for store_name, store_list in shopping_lists.items():
+                    if store_list.items:
+                        shopping_message += f"🏪 {store_name.upper()}:\n"
+                        store_total = 0
+                        for item in store_list.items:
+                            shopping_message += f"   • {item.product_name} - £{item.current_price}\n"
+                            store_total += item.current_price
+                            if item.savings_amount > 0:
+                                total_savings += item.savings_amount
+                        shopping_message += f"   Subtotal: £{store_total:.2f}\n\n"
+                
+                if total_savings > 0:
+                    shopping_message += f"💰 Total Savings: £{total_savings:.2f}\n"
+                
+                # Send email using asyncio
+                async def send_email():
+                    await notification_manager.send_notification(
+                        subject="Daily Shopping List - Best Prices",
+                        message=shopping_message
+                    )
+                
+                asyncio.run(send_email())
+                
+                return jsonify({
+                    'message': 'Shopping list sent successfully',
+                    'stores': list(shopping_lists.keys()),
+                    'total_savings': total_savings
+                })
+            else:
+                return jsonify({'message': 'No shopping lists generated'})
+                
+        except Exception as e:
+            logger.error(f"Shopping list webhook error: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/webhook/scrape-and-list', methods=['POST', 'GET'])
+    @webhook_auth_required
+    def webhook_scrape_and_list():
+        """Webhook endpoint to scrape prices AND send shopping list"""
+        try:
+            # First trigger scraping
+            scrape_response = webhook_scrape()
+            scrape_data = scrape_response.get_json()
+            
+            if 'error' in scrape_data:
+                return jsonify({'scraping_error': scrape_data['error']}), 500
+            
+            # Then send shopping list
+            list_response = webhook_shopping_list()
+            list_data = list_response.get_json()
+            
+            return jsonify({
+                'message': 'Scraping and shopping list completed',
+                'scraping': scrape_data,
+                'shopping_list': list_data
+            })
+            
+        except Exception as e:
+            logger.error(f"Combined webhook error: {str(e)}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/webhook/health', methods=['GET'])
+    def webhook_health():
+        """Health check endpoint for webhooks"""
+        return jsonify({
+            'status': 'healthy',
+            'timestamp': datetime.now().isoformat(),
+            'endpoints': [
+                '/webhook/scrape',
+                '/webhook/shopping-list', 
+                '/webhook/scrape-and-list'
+            ]
+        })
+    
     return app
